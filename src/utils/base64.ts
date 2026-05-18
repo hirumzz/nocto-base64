@@ -3,6 +3,7 @@ export interface EncodeOptions {
   encodeEachLine: boolean;
   splitChunks: boolean;
   urlSafe: boolean;
+  k8sSecret: boolean;
   charset?: string; // Currently supports UTF-8 implicitly, added for future extensibility
 }
 
@@ -12,6 +13,7 @@ const defaultOptions: EncodeOptions = {
   encodeEachLine: false,
   splitChunks: false,
   urlSafe: false,
+  k8sSecret: false,
 };
 
 export function encodeBase64Text(text: string, options: Partial<EncodeOptions> = {}): string {
@@ -19,10 +21,32 @@ export function encodeBase64Text(text: string, options: Partial<EncodeOptions> =
   const opts = { ...defaultOptions, ...options };
 
   try {
+    if (opts.k8sSecret) {
+      const lines = text.split(/\r?\n/);
+      const processedLines = lines.map(line => {
+        const match = line.match(/^([^:=]+)([:=])\s*(.*)$/);
+        if (match) {
+          const key = match[1];
+          const separator = match[2];
+          const value = match[3];
+          if (!value.trim()) return line;
+          
+          // Encode only the value part without k8sSecret recursiveness
+          const encodedValue = encodeBase64Text(value, { 
+            ...opts, 
+            k8sSecret: false,
+            encodeEachLine: false 
+          });
+          return `${key}${separator} ${encodedValue}`;
+        }
+        return line;
+      });
+      return processedLines.join(opts.newlineSeparator);
+    }
+
     let result = '';
 
     if (opts.encodeEachLine) {
-      // Split by common newlines (\r\n or \n)
       const lines = text.split(/\r?\n/);
       const encodedLines = lines.map(line => {
         const bytes = new TextEncoder().encode(line);
@@ -41,7 +65,6 @@ export function encodeBase64Text(text: string, options: Partial<EncodeOptions> =
     }
 
     if (opts.splitChunks) {
-      // Split into 76-character chunks
       const chunks = result.match(/.{1,76}/g) || [];
       result = chunks.join(opts.newlineSeparator);
     }
@@ -56,42 +79,53 @@ export function decodeBase64Text(base64: string, _options: Partial<EncodeOptions
   if (!base64) return '';
 
   try {
-    // If it was split into chunks or has newlines, remove them for decoding
     let cleanedBase64 = base64.replace(/\s+/g, '');
-    
-    // Always attempt to handle URL-safe format by replacing back
     cleanedBase64 = cleanedBase64.replace(/-/g, '+').replace(/_/g, '/');
     
-    // Pad with '=' if necessary
     while (cleanedBase64.length % 4 !== 0) {
       cleanedBase64 += '=';
     }
 
     const binString = atob(cleanedBase64);
     const bytes = Uint8Array.from(binString, (m) => m.codePointAt(0)!);
-    
-    // Decode back to text
     return new TextDecoder().decode(bytes);
-    
-    // Note: decode doesn't fully reverse "encodeEachLine" perfectly if the original text had no newlines
-    // but the user encoded each line separately. Actually, decodeBase64Text will decode the whole block 
-    // together if it's one big base64 string. 
-    // If encodeEachLine was used, the base64 string has newlines, which we just stripped above,
-    // wait... if encodeEachLine was used, each line was encoded individually!
-    // That means we can't just strip newlines and decode the whole thing as one continuous base64 string,
-    // because padding (=) might exist in the middle of the document!
-    // So if encodeEachLine is used, we need to decode line by line.
   } catch (error) {
     throw new Error('Invalid Base64 string');
   }
 }
 
-// Improved decode for encodeEachLine
+// Improved decode for encodeEachLine and k8sSecret
 export function advancedDecodeBase64Text(base64: string, options: Partial<EncodeOptions> = {}): string {
   if (!base64) return '';
   const opts = { ...defaultOptions, ...options };
 
   try {
+    if (opts.k8sSecret) {
+      const lines = base64.split(/\r?\n/);
+      const processedLines = lines.map(line => {
+        const match = line.match(/^([^:=]+)([:=])\s*(.*)$/);
+        if (match) {
+          const key = match[1];
+          const separator = match[2];
+          const value = match[3].trim();
+          if (!value) return line;
+
+          try {
+            const decodedValue = advancedDecodeBase64Text(value, { 
+              ...opts, 
+              k8sSecret: false,
+              encodeEachLine: false 
+            });
+            return `${key}${separator} ${decodedValue}`;
+          } catch (e) {
+            return line; // Fallback if not valid base64
+          }
+        }
+        return line;
+      });
+      return processedLines.join(opts.newlineSeparator);
+    }
+
     if (opts.encodeEachLine) {
        const lines = base64.split(/\r?\n/);
        const decodedLines = lines.map(line => {

@@ -18,6 +18,7 @@ function App() {
   const [encodeEachLine, setEncodeEachLine] = useState(false);
   const [splitChunks, setSplitChunks] = useState(false);
   const [urlSafe, setUrlSafe] = useState(false);
+  const [k8sSecret, setK8sSecret] = useState(false);
   const [liveMode, setLiveMode] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,6 +28,7 @@ function App() {
     encodeEachLine,
     splitChunks,
     urlSafe,
+    k8sSecret,
     charset
   });
 
@@ -54,7 +56,7 @@ function App() {
     if (liveMode) {
       performConversion();
     }
-  }, [input, mode, charset, newline, encodeEachLine, splitChunks, urlSafe, liveMode]);
+  }, [input, mode, charset, newline, encodeEachLine, splitChunks, urlSafe, k8sSecret, liveMode]);
 
   const toggleMode = () => {
     setMode(mode === 'encode' ? 'decode' : 'encode');
@@ -285,6 +287,14 @@ function App() {
               </label>
             </div>
 
+            <div className="options-row checkbox-row">
+              <label className="checkbox-container">
+                <input type="checkbox" checked={k8sSecret} onChange={e => setK8sSecret(e.target.checked)} />
+                <span className="checkmark"></span>
+                <span className="option-desc">Kubernetes Secret / Env mode (encode only values of Key-Value pairs).</span>
+              </label>
+            </div>
+
             <div className="options-row action-row">
               <button 
                 className={`live-mode-toggle ${liveMode ? 'on' : 'off'}`} 
@@ -304,7 +314,7 @@ function App() {
                   {mode === 'encode' ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
                 </button>
                 <span className="option-desc" style={{ marginLeft: '1rem' }}>
-                  {mode === 'encode' ? 'Encodes your data into the area below.' : 'Decodes your data into the area below.'}
+                  {mode === 'encode' ? 'Encodes your data.' : 'Decodes your data.'}
                 </span>
               </div>
             )}
