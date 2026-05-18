@@ -58,7 +58,6 @@ function App() {
 
   const toggleMode = () => {
     setMode(mode === 'encode' ? 'decode' : 'encode');
-    // Keep input empty or swap? For simplicity, just swap text areas.
     setInput(output);
     setOutput('');
   };
@@ -136,15 +135,7 @@ function App() {
           const base64Data = result.split(',')[1];
           if (base64Data) {
             setInput(`[File: ${file.name}]`);
-            // File uploads often ignore live-mode options, but let's re-run it
-            if (liveMode) {
-              // Direct set to avoid parsing the "[File...]" string
-              setOutput(base64Data);
-            } else {
-              // We just prep the base64Data to be ready for ENCODE button click
-              // Actually for files, base64 is already done. Let's just output it if live mode.
-              setOutput(base64Data);
-            }
+            setOutput(base64Data);
           } else {
             setError('Failed to extract base64 from file.');
           }
@@ -213,8 +204,9 @@ function App() {
         </div>
 
         <div className="glass-panel">
-          <div className="editors-grid" style={{ minHeight: 'auto', marginBottom: '1.5rem' }}>
-            <div className="editor-pane" style={{ minHeight: '300px' }}>
+          {/* Side-by-Side Editors */}
+          <div className="editors-grid" style={{ marginBottom: '1.5rem' }}>
+            <div className="editor-pane">
               <div className="editor-header">
                 <span>Input ({mode === 'encode' ? 'Text/File' : 'Base64'})</span>
                 <div className="editor-actions">
@@ -231,28 +223,29 @@ function App() {
               />
             </div>
 
-            <div className="editor-pane" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}>
-              <div 
-                className="file-dropzone" 
-                style={{ height: '100%', marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <FileUp size={48} className="icon" style={{ margin: '0 auto' }} />
-                <h3 style={{ margin: '1rem 0 0.5rem' }}>Click or drag a file</h3>
-                <p>Maximum size: 10MB</p>
-                {fileName && <p style={{ color: 'var(--success)', marginTop: '0.5rem' }}>Selected: {fileName}</p>}
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  hidden 
-                  onChange={handleFileUpload} 
-                />
+            <div className="editor-pane">
+              <div className="editor-header">
+                <span>Output ({mode === 'encode' ? 'Base64' : 'Text/File'})</span>
+                <div className="editor-actions">
+                  <button className="action-btn" onClick={copyToClipboard} title="Copy to Clipboard">
+                    <Copy size={16} />
+                  </button>
+                  <button className="action-btn" onClick={downloadOutput} title="Download Result">
+                    <Download size={16} />
+                  </button>
+                </div>
               </div>
+              <textarea 
+                className="code-editor"
+                value={output}
+                readOnly
+                placeholder="Result will appear here..."
+              />
             </div>
           </div>
 
           {/* Options Panel */}
-          <div className="options-panel">
+          <div className="options-panel" style={{ marginBottom: '1.5rem' }}>
             <div className="options-row">
               <select value={charset} onChange={e => setCharset(e.target.value)} className="glass-select">
                 <option value="UTF-8">UTF-8</option>
@@ -323,24 +316,21 @@ function App() {
             </div>
           )}
 
-          <div className="editor-pane" style={{ minHeight: '300px', marginTop: '1.5rem' }}>
-            <div className="editor-header">
-              <span>Output ({mode === 'encode' ? 'Base64' : 'Text/File'})</span>
-              <div className="editor-actions">
-                <button className="action-btn" onClick={copyToClipboard} title="Copy to Clipboard">
-                  <Copy size={16} />
-                </button>
-                <button className="action-btn" onClick={downloadOutput} title="Download Result">
-                  <Download size={16} />
-                </button>
-              </div>
-            </div>
-            <textarea 
-              className="code-editor"
-              value={output}
-              readOnly
-              placeholder="Result will appear here..."
-              style={{ minHeight: '250px' }}
+          {/* File Dropzone placed at the bottom */}
+          <div 
+            className="file-dropzone" 
+            style={{ marginBottom: 0 }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <FileUp size={48} className="icon" style={{ margin: '0 auto' }} />
+            <h3 style={{ margin: '1rem 0 0.5rem' }}>Click or drag a file to upload</h3>
+            <p>Maximum size: 10MB</p>
+            {fileName && <p style={{ color: 'var(--success)', marginTop: '0.5rem' }}>Selected: {fileName}</p>}
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              hidden 
+              onChange={handleFileUpload} 
             />
           </div>
 
