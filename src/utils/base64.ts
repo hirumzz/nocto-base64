@@ -26,10 +26,9 @@ export function encodeBase64Text(text: string, options: Partial<EncodeOptions> =
       const processedLines = lines.map(line => {
         const match = line.match(/^([^:=]+)([:=])\s*(.*)$/);
         if (match) {
-          const key = match[1];
-          const separator = match[2];
-          const value = match[3];
-          if (!value.trim()) return line;
+          const key = match[1].trim();
+          const value = match[3].trim();
+          if (!value) return line;
           
           // Encode only the value part without k8sSecret recursiveness
           const encodedValue = encodeBase64Text(value, { 
@@ -37,7 +36,7 @@ export function encodeBase64Text(text: string, options: Partial<EncodeOptions> =
             k8sSecret: false,
             encodeEachLine: false 
           });
-          return `${key}${separator} ${encodedValue}`;
+          return `${key}: ${encodedValue}`;
         }
         return line;
       });
