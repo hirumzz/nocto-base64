@@ -287,12 +287,18 @@ function App() {
               </label>
             </div>
 
-            <div className="options-row checkbox-row">
+            <div className="options-row checkbox-row" style={{ display: 'flex', alignItems: 'center' }}>
               <label className="checkbox-container">
                 <input type="checkbox" checked={k8sSecret} onChange={e => setK8sSecret(e.target.checked)} />
                 <span className="checkmark"></span>
                 <span className="option-desc">Kubernetes Secret / Env mode (encode only values of Key-Value pairs).</span>
               </label>
+              <div className="tooltip-container">
+                <span className="tooltip-icon">?</span>
+                <div className="tooltip-content">
+                  Converts <code>KEY=value</code> or <code>KEY: value</code> into standard Kubernetes YAML <code>KEY: base64(value)</code>.
+                </div>
+              </div>
             </div>
 
             <div className="options-row action-row">
