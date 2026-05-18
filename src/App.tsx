@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Trash2, Copy, Download, FileUp } from 'lucide-react';
-import { encodeBase64Text, decodeBase64Text, formatBytes } from './utils/base64';
+import { Trash2, Copy, Download, FileUp, ChevronRight, ChevronLeft } from 'lucide-react';
+import { encodeBase64Text, advancedDecodeBase64Text, formatBytes } from './utils/base64';
+import type { EncodeOptions } from './utils/base64';
 
 type Mode = 'encode' | 'decode';
 
@@ -11,32 +12,55 @@ function App() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // Advanced Options State
+  const [charset, setCharset] = useState('UTF-8');
+  const [newline, setNewline] = useState('\n');
+  const [encodeEachLine, setEncodeEachLine] = useState(false);
+  const [splitChunks, setSplitChunks] = useState(false);
+  const [urlSafe, setUrlSafe] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle Live Conversion
-  useEffect(() => {
+  const getOptions = (): EncodeOptions => ({
+    newlineSeparator: newline,
+    encodeEachLine,
+    splitChunks,
+    urlSafe,
+    charset
+  });
+
+  const performConversion = (textToConvert = input) => {
     setError(null);
-    if (!input) {
+    if (!textToConvert) {
       setOutput('');
       return;
     }
 
     try {
       if (mode === 'encode') {
-        setOutput(encodeBase64Text(input));
+        setOutput(encodeBase64Text(textToConvert, getOptions()));
       } else {
-        setOutput(decodeBase64Text(input));
+        setOutput(advancedDecodeBase64Text(textToConvert, getOptions()));
       }
     } catch (err: any) {
       setError(err.message || 'Conversion error');
       setOutput('');
     }
-  }, [input, mode]);
+  };
+
+  // Handle Live Conversion
+  useEffect(() => {
+    if (liveMode) {
+      performConversion();
+    }
+  }, [input, mode, charset, newline, encodeEachLine, splitChunks, urlSafe, liveMode]);
 
   const toggleMode = () => {
     setMode(mode === 'encode' ? 'decode' : 'encode');
-    // Swap input and output for a seamless experience
+    // Keep input empty or swap? For simplicity, just swap text areas.
     setInput(output);
+    setOutput('');
   };
 
   const clearAll = () => {
@@ -53,7 +77,6 @@ function App() {
     if (!output) return;
     try {
       await navigator.clipboard.writeText(output);
-      // Could show a toast here in a full app
     } catch (err) {
       console.error('Failed to copy', err);
     }
@@ -61,18 +84,14 @@ function App() {
 
   const downloadOutput = () => {
     if (!output) return;
-    
-    // Determine mime type and extension
     let mimeType = 'text/plain';
     let ext = 'txt';
     let blobData: BlobPart = output;
     
     if (mode === 'decode' && fileName) {
-      // If we are decoding a file, we might want to output it as binary or text.
-      // For simplicity, we'll download as text unless we implement binary blob creation.
-      // But actually, decoding base64 back to binary for download:
       try {
-         const cleanedBase64 = input.replace(/\s+/g, '');
+         let cleanedBase64 = input.replace(/\s+/g, '');
+         cleanedBase64 = cleanedBase64.replace(/-/g, '+').replace(/_/g, '/');
          const binString = atob(cleanedBase64);
          const bytes = new Uint8Array(binString.length);
          for (let i = 0; i < binString.length; i++) {
@@ -80,10 +99,8 @@ function App() {
          }
          blobData = bytes;
          mimeType = 'application/octet-stream';
-         ext = 'bin'; // Generic binary extension if original is unknown
-      } catch (e) {
-         // Fallback to text
-      }
+         ext = 'bin'; 
+      } catch (e) {}
     }
 
     const blob = new Blob([blobData], { type: mimeType });
@@ -101,7 +118,6 @@ function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Enforce 10MB limit
     const MAX_SIZE = 10 * 1024 * 1024; // 10MB
     if (file.size > MAX_SIZE) {
       setError(`File is too large. Maximum size is ${formatBytes(MAX_SIZE)}.`);
@@ -117,19 +133,24 @@ function App() {
       const result = event.target?.result;
       if (typeof result === 'string') {
         if (mode === 'encode') {
-          // readAsDataURL gives "data:mime/type;base64,..."
           const base64Data = result.split(',')[1];
           if (base64Data) {
-            // Put original file content representation into input might freeze if too large
-            // So we'll just set the output directly for file encode
             setInput(`[File: ${file.name}]`);
-            setOutput(base64Data);
+            // File uploads often ignore live-mode options, but let's re-run it
+            if (liveMode) {
+              // Direct set to avoid parsing the "[File...]" string
+              setOutput(base64Data);
+            } else {
+              // We just prep the base64Data to be ready for ENCODE button click
+              // Actually for files, base64 is already done. Let's just output it if live mode.
+              setOutput(base64Data);
+            }
           } else {
             setError('Failed to extract base64 from file.');
           }
         } else {
-          // readAsText gives standard string text
           setInput(result);
+          if (liveMode) performConversion(result);
         }
       }
     };
@@ -144,19 +165,12 @@ function App() {
       reader.readAsText(file);
     }
     
-    // Reset file input so same file can be uploaded again if cleared
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
-
-  // Generate obfuscated footer text
   const getFooterText = () => {
-    // "© 2026 Nocto Base64. All rights reserved."
     const charCodes = [169, 32, 50, 48, 50, 54, 32, 78, 111, 99, 116, 111, 32, 66, 97, 115, 101, 54, 52, 46, 32, 65, 108, 108, 32, 114, 105, 103, 104, 116, 115, 32, 114, 101, 115, 101, 114, 118, 101, 100, 46];
     return String.fromCharCode(...charCodes);
   };
@@ -199,30 +213,8 @@ function App() {
         </div>
 
         <div className="glass-panel">
-          <div 
-            className="file-dropzone" 
-            onClick={triggerFileInput}
-          >
-            <FileUp size={48} className="icon" />
-            <h3>Click or drag a file to upload</h3>
-            <p>Maximum file size: 10MB.</p>
-            {fileName && <p style={{ color: 'var(--success)', marginTop: '1rem' }}>Selected: {fileName}</p>}
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              hidden 
-              onChange={handleFileUpload} 
-            />
-          </div>
-
-          {error && (
-            <div style={{ color: 'var(--danger)', marginBottom: '1rem', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', padding: '0.5rem', borderRadius: '0.5rem' }}>
-              {error}
-            </div>
-          )}
-
-          <div className="editors-grid">
-            <div className="editor-pane">
+          <div className="editors-grid" style={{ minHeight: 'auto', marginBottom: '1.5rem' }}>
+            <div className="editor-pane" style={{ minHeight: '300px' }}>
               <div className="editor-header">
                 <span>Input ({mode === 'encode' ? 'Text/File' : 'Base64'})</span>
                 <div className="editor-actions">
@@ -239,26 +231,119 @@ function App() {
               />
             </div>
 
-            <div className="editor-pane">
-              <div className="editor-header">
-                <span>Output ({mode === 'encode' ? 'Base64' : 'Text/File'})</span>
-                <div className="editor-actions">
-                  <button className="action-btn" onClick={copyToClipboard} title="Copy to Clipboard">
-                    <Copy size={16} />
-                  </button>
-                  <button className="action-btn" onClick={downloadOutput} title="Download Result">
-                    <Download size={16} />
-                  </button>
-                </div>
+            <div className="editor-pane" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}>
+              <div 
+                className="file-dropzone" 
+                style={{ height: '100%', marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <FileUp size={48} className="icon" style={{ margin: '0 auto' }} />
+                <h3 style={{ margin: '1rem 0 0.5rem' }}>Click or drag a file</h3>
+                <p>Maximum size: 10MB</p>
+                {fileName && <p style={{ color: 'var(--success)', marginTop: '0.5rem' }}>Selected: {fileName}</p>}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  hidden 
+                  onChange={handleFileUpload} 
+                />
               </div>
-              <textarea 
-                className="code-editor"
-                value={output}
-                readOnly
-                placeholder="Result will appear here..."
-              />
             </div>
           </div>
+
+          {/* Options Panel */}
+          <div className="options-panel">
+            <div className="options-row">
+              <select value={charset} onChange={e => setCharset(e.target.value)} className="glass-select">
+                <option value="UTF-8">UTF-8</option>
+              </select>
+              <span className="option-desc">Destination character set.</span>
+            </div>
+
+            <div className="options-row">
+              <select value={newline} onChange={e => setNewline(e.target.value)} className="glass-select">
+                <option value="\n">LF (Unix)</option>
+                <option value="\r\n">CRLF (Windows)</option>
+              </select>
+              <span className="option-desc">Destination newline separator.</span>
+            </div>
+
+            <div className="options-row checkbox-row">
+              <label className="checkbox-container">
+                <input type="checkbox" checked={encodeEachLine} onChange={e => setEncodeEachLine(e.target.checked)} />
+                <span className="checkmark"></span>
+                <span className="option-desc">Encode each line separately (useful for when you have multiple entries).</span>
+              </label>
+            </div>
+
+            <div className="options-row checkbox-row">
+              <label className="checkbox-container">
+                <input type="checkbox" checked={splitChunks} onChange={e => setSplitChunks(e.target.checked)} />
+                <span className="checkmark"></span>
+                <span className="option-desc">Split lines into 76 character wide chunks (useful for MIME).</span>
+              </label>
+            </div>
+
+            <div className="options-row checkbox-row">
+              <label className="checkbox-container">
+                <input type="checkbox" checked={urlSafe} onChange={e => setUrlSafe(e.target.checked)} />
+                <span className="checkmark"></span>
+                <span className="option-desc">Perform URL-safe encoding (uses Base64URL format).</span>
+              </label>
+            </div>
+
+            <div className="options-row action-row">
+              <button 
+                className={`live-mode-toggle ${liveMode ? 'on' : 'off'}`} 
+                onClick={() => setLiveMode(!liveMode)}
+              >
+                <span className="indicator"></span>
+                Live mode {liveMode ? 'ON' : 'OFF'}
+              </button>
+              <span className="option-desc">Encodes in real-time as you type or paste (supports only the UTF-8 character set).</span>
+            </div>
+
+            {!liveMode && (
+              <div className="options-row" style={{ marginTop: '1rem' }}>
+                <button className="primary-action-btn convert-btn" onClick={() => performConversion()}>
+                  {mode === 'encode' ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+                  {mode.toUpperCase()}
+                  {mode === 'encode' ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                </button>
+                <span className="option-desc" style={{ marginLeft: '1rem' }}>
+                  {mode === 'encode' ? 'Encodes your data into the area below.' : 'Decodes your data into the area below.'}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div style={{ color: 'var(--danger)', margin: '1rem 0', textAlign: 'center', background: 'rgba(239, 68, 68, 0.1)', padding: '0.5rem', borderRadius: '0.5rem' }}>
+              {error}
+            </div>
+          )}
+
+          <div className="editor-pane" style={{ minHeight: '300px', marginTop: '1.5rem' }}>
+            <div className="editor-header">
+              <span>Output ({mode === 'encode' ? 'Base64' : 'Text/File'})</span>
+              <div className="editor-actions">
+                <button className="action-btn" onClick={copyToClipboard} title="Copy to Clipboard">
+                  <Copy size={16} />
+                </button>
+                <button className="action-btn" onClick={downloadOutput} title="Download Result">
+                  <Download size={16} />
+                </button>
+              </div>
+            </div>
+            <textarea 
+              className="code-editor"
+              value={output}
+              readOnly
+              placeholder="Result will appear here..."
+              style={{ minHeight: '250px' }}
+            />
+          </div>
+
         </div>
       </main>
 

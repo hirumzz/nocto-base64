@@ -239,3 +239,152 @@ footer {
 @media (max-width: 768px) {
   .editors-grid { grid-template-columns: 1fr; }
 }
+
+/* Options Panel */
+.options-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.options-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.checkbox-row {
+  margin-top: 0.25rem;
+}
+
+.option-desc {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.glass-select {
+  background: rgba(15, 23, 42, 0.8);
+  color: var(--text-main);
+  border: 1px solid var(--glass-border);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  outline: none;
+  font-family: inherit;
+  min-width: 150px;
+  cursor: pointer;
+}
+
+.glass-select:focus {
+  border-color: var(--primary);
+}
+
+/* Custom Checkbox */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  height: 20px;
+  width: 20px;
+  background-color: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.checkbox-container:hover input ~ .checkmark {
+  border-color: var(--primary);
+}
+
+.checkbox-container input:checked ~ .checkmark {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.checkmark:after {
+  content: "";
+  display: none;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+/* Live Mode Toggle */
+.action-row {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--glass-border);
+}
+
+.live-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--glass-border);
+  background: rgba(15, 23, 42, 0.8);
+  color: var(--text-main);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.live-mode-toggle .indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--danger);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+  transition: all 0.3s;
+}
+
+.live-mode-toggle.on .indicator {
+  background-color: var(--success);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+.live-mode-toggle:hover {
+  border-color: var(--primary);
+}
+
+.convert-btn {
+  background: var(--success);
+  font-size: 1.1rem;
+  padding: 0.75rem 2rem;
+  justify-content: center;
+  min-width: 200px;
+}
+
+.convert-btn:hover {
+  background: #059669;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+}
