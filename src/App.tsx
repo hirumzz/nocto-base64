@@ -345,6 +345,39 @@ function App() {
           </div>
 
         </div>
+
+        {/* Developer Guide & FAQ for Google SEO Indexing */}
+        <section className="developer-guide">
+          <h2 className="guide-title">NocBase Developer & FAQ Guide</h2>
+          
+          <div className="guide-section">
+            <h3>What is Base64 Encoding?</h3>
+            <p>
+              Base64 is a binary-to-text encoding scheme that translates raw binary data into a secure ASCII string format comprising 64 standard characters (<code>A-Z</code>, <code>a-z</code>, <code>0-9</code>, <code>+</code>, and <code>/</code>). This ensures safe data transmission over text-only media channels, preventing parameters from getting scrambled by network routers.
+            </p>
+          </div>
+
+          <div className="guide-section">
+            <h3>Standard vs. URL-Safe Base64 (Base64URL)</h3>
+            <p>
+              Standard Base64 contains symbols like <code>+</code> and <code>/</code>, which serve special functions in URL parameters, API query filters, and directory structures. URL-safe Base64 (Base64URL) automatically replaces these characters with <code>-</code> and <code>_</code> respectively, and omits the trailing padding sign (<code>=</code>) to produce clean, safe routes. It is standard practice for modern API designs, JWT tokens, and OAuth keys.
+            </p>
+          </div>
+
+          <div className="guide-section">
+            <h3>Kubernetes Secret & Env Converter</h3>
+            <p>
+              When creating Kubernetes Secret definitions (like YAML data structures) or `.env` files, developers often need to base64 encode individual parameters while keeping the keys intact. Enabling **Kubernetes Secret / Env mode** automatically processes environment variable statements (e.g. <code>DB_PASSWORD=mySecret</code> or <code>DB_HOST: 127.0.0.1</code>), converting the syntax and encoding *only* the values. The output is structured exactly as standard Kubernetes YAML requires: <code>DB_PASSWORD: bXlTZWNyZXQ=</code>.
+            </p>
+          </div>
+
+          <div className="guide-section">
+            <h3>100% Client-Side Privacy & Offline Security</h3>
+            <p>
+              Security and developer privacy are our core focus. Unlike other online converters, **NocBase performs all conversions 100% locally inside your web browser**. No data is transmitted to an external server or saved database, protecting your raw passwords, secret keys, and payload archives. You can safely cut off your internet connection and convert fully offline!
+            </p>
+          </div>
+        </section>
       </main>
 
       <footer>
